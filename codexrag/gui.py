@@ -52,11 +52,13 @@ def load_rag_system():
     """Load the RAG system (cached for performance)."""
     # Heuristic: Find where the .codexrag index actually lives
     cwd = Path(".").resolve()
-    candidates = [cwd, cwd.parent]
+    # Check parent FIRST (common for nested usage), then current
+    candidates = [cwd.parent, cwd]
     
     repo = cwd
     for cand in candidates:
-        if (cand / ".codexrag").exists():
+        # Check for actual index directory (avoid empty log folders)
+        if (cand / ".codexrag" / "index").exists():
             repo = cand
             break
 
