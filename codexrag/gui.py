@@ -110,7 +110,12 @@ with st.sidebar:
     
     if orch:
         st.success("✅ RAG Index Loaded")
-        st.info(f"📚 Knowledge Base: {len(orch.retriever.store.chunks)} chunks")
+        # Handle wrapped retriever (GraphEnhancedRetriever)
+        if hasattr(orch.retriever, "base"):
+            chunk_count = len(orch.retriever.base.store.chunks)
+        else:
+            chunk_count = len(orch.retriever.store.chunks)
+        st.info(f"📚 Knowledge Base: {chunk_count} chunks")
         st.info(f"🧠 Model: `{cfg.ollama_model}`")
     else:
         st.error("❌ Index Not Found")

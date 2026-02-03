@@ -50,19 +50,31 @@ source .venv/bin/activate
 ```
 
 ### Index Your Codebase
+**Option 1: Standalone Mode (Recommended)**
 ```bash
-codexrag index --repo /path/to/your/project
+# 1. Enter the directory
+cd CodeXRAG_Dist
+
+# 2. Index the parent repo (your code)
+./.venv/bin/codexrag index --repo .. --config ../rag4mycodex/config.yaml
+```
+
+**Option 2: From Parent Root**
+```bash
+# Index current directory
+./CodeXRAG_Dist/.venv/bin/codexrag index --repo . --config rag4mycodex/config.yaml
 ```
 
 ### Ask Questions
 ```bash
 # CLI
-codexrag ask --repo /path/to/your/project --question "How is RpA computed?"
+./CodeXRAG_Dist/.venv/bin/codexrag ask --repo . --config rag4mycodex/config.yaml --question "How is RpA computed?"
 
 # Interactive Chat
-codexrag chat --repo /path/to/your/project
+./CodeXRAG_Dist/.venv/bin/codexrag chat --repo . --config rag4mycodex/config.yaml
 
-# Web UI (with LaTeX support!)
+# Web UI (Run from CodeXRAG_Dist folder)
+cd CodeXRAG_Dist
 streamlit run codexrag/gui.py
 ```
 
