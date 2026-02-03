@@ -9,6 +9,10 @@ from codexrag.chunking import split_long_chunks
 from codexrag.types import Chunk
 from codexrag.utils_hash import sha256_file
 from codexrag.index_store import IndexStore
+from codexrag.utils_warnings import suppress_common_warnings
+
+# Suppress harmless warnings
+suppress_common_warnings()
 
 def _load_manifest(cache_dir: Path) -> Dict[str, str]:
     path = cache_dir / "manifest.json"

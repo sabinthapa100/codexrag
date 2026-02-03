@@ -12,6 +12,7 @@ Key Features:
 Author: Sabin Thapa (sthapa3@kent.edu)
 """
 
+
 import streamlit as st
 import time
 from pathlib import Path
@@ -21,6 +22,10 @@ from codexrag.agents.orchestrator import Orchestrator
 from codexrag.agents.safety_agent import SafetyAgent
 from codexrag.llm_ollama import make_ollama
 from codexrag.config import load_config
+from codexrag.utils_warnings import suppress_common_warnings
+
+# Suppress harmless warnings
+suppress_common_warnings()
 
 # Page Configuration
 st.set_page_config(
