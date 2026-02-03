@@ -1,0 +1,99 @@
+# Golden Question Test Suite
+# These questions represent core use cases that must work reliably
+
+conceptual_physics:
+  - question: "How do you compute nuclear modification factor?"
+    expected_elements: ["R_pA", "formula", "cross section"]
+    must_not_refuse: true
+    
+  - question: "What is RpA and how does it relate to RAA?"
+    expected_elements: ["nuclear modification", "proton", "nucleus"]
+    must_not_refuse: true
+    
+  - question: "Explain nuclear absorption in pPb collisions"
+    expected_elements: ["absorption", "cross section", "nuclear matter"]
+    must_not_refuse: true
+    
+  - question: "What is the Glauber model?"
+    expected_elements: ["Glauber", "nuclear", "collision"]
+    must_not_refuse: true
+    
+  - question: "How is energy loss computed for charm quarks?"
+    expected_elements: ["energy loss", "charm", "quark"]
+    must_not_refuse: true
+
+repo_architecture:
+  - question: "What does eloss_code do?"
+    expected_elements: ["energy loss", "code", "module"]
+    must_cite_repo: true
+    must_not_refuse: true
+    
+  - question: "What is the purpose of npdf_code?"
+    expected_elements: ["nPDF", "nuclear", "PDF"]
+    must_cite_repo: true
+    must_not_refuse: true
+    
+  - question: "How is cnm_combine used?"
+    expected_elements: ["CNM", "combine", "cold nuclear matter"]
+    must_cite_repo: true
+    must_not_refuse: true
+    
+  - question: "What notebooks are in the project?"
+    expected_elements: ["notebook", ".ipynb"]
+    must_cite_repo: true
+    must_not_refuse: true
+
+code_location:
+  - question: "Where is compute_rpa_grid defined?"
+    expected_elements: ["function", "file", "line"]
+    must_cite_repo: true
+    must_have_path: true
+    
+  - question: "Which functions call compute_rpa_grid?"
+    expected_elements: ["function", "call"]
+    must_cite_repo: true
+    
+  - question: "Where is RpA computed in the codebase?"
+    expected_elements: ["compute", "function", "file"]
+    must_cite_repo: true
+    must_have_path: true
+    
+  - question: "What files are in npdf_code directory?"
+    expected_elements: ["npdf_code", "file", ".py"]
+    must_cite_repo: true
+
+usage_reproduction:
+  - question: "How do I compute RpA for LHC pPb collisions?"
+    expected_elements: ["function", "parameter", "call"]
+    must_not_refuse: true
+    
+  - question: "What parameters does compute_rpa take?"
+    expected_elements: ["parameter", "argument", "function"]
+    must_cite_repo: true
+    
+  - question: "How to reproduce the nPDF plots?"
+    expected_elements: ["plot", "notebook", "function"]
+    must_not_refuse: true
+
+data_questions:
+  - question: "What CSV files contain experimental data?"
+    expected_elements: ["CSV", "data", "file"]
+    must_cite_repo: true
+    
+  - question: "What columns are in the experimental data?"
+    expected_elements: ["column", "data", "CSV"]
+    must_not_refuse: true
+
+math_formulas:
+  - question: "What is the formula for nuclear modification factor?"
+    expected_elements: ["formula", "R_pA", "equation"]
+    must_have_latex: true
+    must_not_refuse: true
+    
+  - question: "How is Hessian uncertainty calculated?"
+    expected_elements: ["Hessian", "uncertainty", "formula"]
+    must_not_refuse: true
+    
+  - question: "What is the pT broadening formula?"
+    expected_elements: ["pT", "broadening", "formula"]
+    must_not_refuse: true

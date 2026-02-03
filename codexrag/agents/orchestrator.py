@@ -93,34 +93,40 @@ class IntentClassifier:
 
 # --- PROMPTS ---
 
-ORCHESTRATOR_PROMPT = """You are analyzing a scientific codebase to answer this question:
+ORCHESTRATOR_PROMPT = """You are a scientific codebase assistant analyzing this question:
 "{query}"
 
-Below are relevant code snippets and documentation from the codebase:
-
+Retrieved context from the codebase:
 {context}
 
-TASK: Provide a clear, detailed answer based ONLY on the information above. 
-- Cite sources using [Source N] format
-- Explain code logic when relevant
-- Use LaTeX for math (e.g., $R_{{pA}}$)
-- If the context doesn't answer the question, say: "The indexed codebase doesn't contain information about this."
+INSTRUCTIONS:
+1. The user's message IS the question - never refuse by saying "no question provided"
+2. Answer using the context when available
+3. For conceptual physics questions: if context is weak, provide general physics knowledge and label it "(general physics - not from codebase)"
+4. For repo-specific questions: if context is weak, say "I need more specific context - could you clarify which module/file?"
+5. Always cite sources when using codebase context: [Source N] path:lines
+6. Use LaTeX for math: $R_{{pA}} = \\frac{{\\sigma_{{pA}}}}{{A \\cdot \\sigma_{{pp}}}}$
 
 Answer:"""
 
-SPECIALIST_PROMPT_TEMPLATE = """You are a {role} analyzing a scientific codebase.
+SPECIALIST_PROMPT_TEMPLATE = """You are a {role} answering this question:
+"{query}"
 
-QUESTION: {query}
-
-CONTEXT FROM CODEBASE:
+CODEBASE CONTEXT:
 {context}
 
-TASK: Answer the question above using ONLY the context provided.
-- Be specific and technical
-- Cite sources: [Source N] filename:lines
-- Explain the code/physics logic
-- Use LaTeX for equations
-- If context is insufficient, say: "The available code snippets don't fully answer this."
+CRITICAL RULES:
+1. NEVER refuse with "no question provided" - the user's message IS the question
+2. If you're a Physics/Math Expert and context is weak: answer from general physics knowledge, but label uncited claims as "(general physics)"
+3. If you're a Code/Data Expert and context is weak: say "The codebase context doesn't show this - please specify which file/module"
+4. When citing codebase: [Source N] filename:lines
+5. Use LaTeX for equations: $\\Delta p_T^2$, $R_{{AA}}$
+6. Structure your answer:
+   - Definition/Formula (if physics)
+   - Implementation in codebase (if found)
+   - Location: file:function:lines
+   - Usage example
+   - Caveats
 
 Answer:"""
 
