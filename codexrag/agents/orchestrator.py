@@ -190,6 +190,46 @@ class Orchestrator:
             return ("Physics/Math Expert", "Explaining formulas, LaTeX equations, and physical models.")
         else:
             return ("General Assistant", "General codebase analysis.")
+    
+    def _compute_retrieval_confidence(self, hits: List[RetrievalHit], question: str) -> float:
+        """
+        Compute confidence score for retrieved context.
+        
+        Returns:
+            float: Confidence score between 0 and 1
+        """
+        if not hits:
+            return 0.0
+        
+        # Use max similarity score as primary signal
+        max_score = max(h.score for h in hits)
+        
+        # Boost if multiple high-quality hits
+        high_quality_count = sum(1 for h in hits if h.score > 0.5)
+        diversity_bonus = min(high_quality_count * 0.1, 0.3)
+        
+        # Check if question keywords appear in retrieved context
+        question_words = set(question.lower().split())
+        context_text = " ".join(h.chunk.text.lower() for h in hits[:3])
+        keyword_overlap = len([w for w in question_words if w in context_text and len(w) > 3])
+        keyword_bonus = min(keyword_overlap * 0.05, 0.2)
+        
+        confidence = min(max_score + diversity_bonus + keyword_bonus, 1.0)
+        return confidence
+    
+    def _is_repo_question(self, question: str, intent: QueryIntent) -> bool:
+        """Determine if question requires repo-specific grounding."""
+        repo_indicators = [
+            "codebase", "repo", "file", "function", "class", "module",
+            "where", "which file", "how is", "what does", "implementation"
+        ]
+        question_lower = question.lower()
+        return any(indicator in question_lower for indicator in repo_indicators) or intent in [QueryIntent.CODE, QueryIntent.DATA]
+    
+    def _is_physics_question(self, intent: QueryIntent) -> bool:
+        """Determine if question is conceptual physics."""
+        return intent == QueryIntent.MATH
+
 
     def query(
         self,
@@ -198,10 +238,11 @@ class Orchestrator:
         top_k_vector: int = 12,
         top_k_rerank: int = 8,
         max_context_chunks: int = 8,
-        enable_self_correction: bool = True
+        enable_self_correction: bool = True,
+        min_confidence_threshold: float = 0.3
     ) -> str:
         """
-        Process a user query through the multi-agent system.
+        Process a user query through the multi-agent system with answerability gating.
         
         Args:
             question: User's question
@@ -210,6 +251,7 @@ class Orchestrator:
             top_k_rerank: Final reranked results
             max_context_chunks: Max chunks to include in prompt
             enable_self_correction: Enable agentic self-correction loop
+            min_confidence_threshold: Minimum confidence to answer without second pass
             
         Returns:
             Formatted answer string
@@ -220,24 +262,60 @@ class Orchestrator:
         # 2. Retrieve relevant context
         hits = self.retriever.retrieve(question, top_k_bm25, top_k_vector, top_k_rerank)
         
-        if not hits:
-            return f"### {intent.value.title()} Analysis\n\nI could not find any relevant documents in the index matching your query."
-            
-        context = self._format_context(hits, max_context_chunks)
+        # 3. Compute retrieval confidence
+        confidence = self._compute_retrieval_confidence(hits, question)
         
-        # 3. Construct Prompt
+        # 4. Answerability Gating: Second-pass retrieval if confidence is low
+        if confidence < min_confidence_threshold and enable_self_correction:
+            # Try query expansion
+            expanded_query = self._expand_query(question)
+            hits2 = self.retriever.retrieve(expanded_query, top_k_bm25, top_k_vector, top_k_rerank)
+            
+            # Use second-pass results if better
+            confidence2 = self._compute_retrieval_confidence(hits2, question)
+            if confidence2 > confidence:
+                hits = hits2
+                confidence = confidence2
+        
+        # 5. Handle empty retrieval based on question type
+        if not hits or confidence < 0.1:
+            is_repo_q = self._is_repo_question(question, intent)
+            is_physics_q = self._is_physics_question(intent)
+            
+            if is_repo_q:
+                return f"""### {intent.value.title()} Analysis
+
+I couldn't find relevant information in the indexed codebase for this question.
+
+**Suggestion:** Could you specify which module, file, or function you're asking about? This will help me search more precisely.
+
+**Available modules:** Check the codebase structure or ask "What modules are in this codebase?" """
+            elif is_physics_q:
+                # For physics questions, allow general knowledge answer (will be labeled by prompt)
+                context = "(No specific codebase context found)"
+            else:
+                return f"### {intent.value.title()} Analysis\n\nI could not find any relevant documents in the index matching your query."
+        else:
+            context = self._format_context(hits, max_context_chunks)
+        
+        # 6. Add grounding metadata to context
+        grounding_note = f"\n\n[RETRIEVAL CONFIDENCE: {confidence:.2f}]"
+        if confidence < min_confidence_threshold:
+            grounding_note += "\n[WARNING: Low confidence - answer may be incomplete]"
+        
+        # 7. Construct Prompt with hard grounding rules
         if intent == QueryIntent.GENERAL:
-            prompt = ORCHESTRATOR_PROMPT.format(query=question, context=context)
+            prompt = ORCHESTRATOR_PROMPT.format(query=question, context=context + grounding_note)
         else:
             role, specialty = self._get_specialist_config(intent)
             prompt = SPECIALIST_PROMPT_TEMPLATE.format(
                 role=role,
                 specialty=specialty,
                 query=question,
-                context=context
+                context=context + grounding_note
             )
         
-        # 4. Invoke LLM
+        # 8. Invoke LLM
         response = self._invoke_llm(prompt)
         
         # 5. Self-Correction Loop (Agentic Pattern)
@@ -333,6 +411,37 @@ class Orchestrator:
             overlap = 0.5
         
         return min(1.0, citation_score + overlap * 0.7)
+    
+    
+    def _expand_query(self, query: str) -> str:
+        """
+        Expand query with synonyms and related terms for second-pass retrieval.
+        
+        Simple keyword expansion without LLM call (for speed).
+        """
+        expansions = {
+            "compute": "calculate computation function",
+            "rpa": "nuclear modification factor R_pA",
+            "raa": "nuclear modification R_AA suppression",
+            "eloss": "energy loss quenching",
+            "npdf": "nuclear PDF parton distribution",
+            "cnm": "cold nuclear matter",
+            "absorption": "nuclear absorption cross section",
+            "glauber": "glauber model collision geometry",
+            "charmonium": "J/psi charm quark",
+        }
+        
+        query_lower = query.lower()
+        expanded_terms = []
+        
+        for key, expansion in expansions.items():
+            if key in query_lower:
+                expanded_terms.append(expansion)
+        
+        if expanded_terms:
+            return f"{query} {' '.join(expanded_terms)}"
+        
+        return query
     
     def _refine_query(self, original_query: str, current_response: str) -> str:
         """

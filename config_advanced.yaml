@@ -1,0 +1,70 @@
+# Configuration for RAG behavior modes
+
+# Performance Mode (affects speed vs quality tradeoff)
+performance_mode: "fast"  # Options: "fast" | "deep"
+
+# Fast Mode Settings (default - optimized for speed)
+fast_mode:
+  top_k_bm25: 6
+  top_k_vector: 6
+  top_k_rerank: 0  # Disable reranking
+  max_context_chunks: 6
+  enable_graph_expansion: false
+  max_tokens: 512
+  
+# Deep Mode Settings (thorough analysis)
+deep_mode:
+  top_k_bm25: 12
+  top_k_vector: 12
+  top_k_rerank: 8
+  max_context_chunks: 12
+  enable_graph_expansion: true
+  max_tokens: 1024
+
+# Grounding Rules (prevent hallucination)
+grounding:
+  # Minimum confidence score to answer without second-pass retrieval
+  min_confidence_threshold: 0.3
+  
+  # Require citations for repo questions
+  require_repo_citations: true
+  
+  # Allow general knowledge for physics questions
+  allow_general_physics: true
+  
+  # Label uncited claims
+  label_uncited_claims: true
+
+# Answerability Gating
+answerability:
+  # Enable second-pass retrieval when confidence is low
+  enable_second_pass: true
+  
+  # Query expansion strategies
+  query_expansion:
+    - "keyword_expansion"  # Add synonyms
+    - "graph_neighbors"    # Use knowledge graph
+  
+  # Maximum retrieval attempts
+  max_retrieval_attempts: 2
+
+# Answer Structure Enforcement
+answer_structure:
+  enforce_format: true
+  required_sections:
+    - "definition"      # What it is
+    - "location"        # Where in repo
+    - "implementation"  # How it works
+    - "usage"          # How to use
+    - "caveats"        # Limitations
+  
+  # Citation requirements
+  citation_format: "[Source N] path/to/file.py:lines"
+  require_line_numbers: true
+
+# Caching (for Streamlit performance)
+caching:
+  cache_embeddings: true
+  cache_retriever: true
+  cache_llm_client: true
+  cache_graph: true
