@@ -195,10 +195,22 @@ class Orchestrator:
         top_k_bm25: int = 12,
         top_k_vector: int = 12,
         top_k_rerank: int = 8,
-        max_context_chunks: int = 8
+        max_context_chunks: int = 8,
+        enable_self_correction: bool = True
     ) -> str:
         """
         Process a user query through the multi-agent system.
+        
+        Args:
+            question: User's question
+            top_k_bm25: BM25 retrieval candidates
+            top_k_vector: Vector retrieval candidates
+            top_k_rerank: Final reranked results
+            max_context_chunks: Max chunks to include in prompt
+            enable_self_correction: Enable agentic self-correction loop
+            
+        Returns:
+            Formatted answer string
         """
         # 1. Classify intent
         intent = self.classifier.classify(question)
@@ -224,28 +236,127 @@ class Orchestrator:
             )
         
         # 4. Invoke LLM
-        # Note: Depending on the LLM type, we might need to wrap in messages
-        try:
-            response = self.llm.invoke(prompt)
-        except Exception as e:
-            # Fallback for different LLM interfaces
-            if hasattr(self.llm, "predict"):
-                response = self.llm.predict(prompt)
-            else:
-                response = f"Error invoking LLM: {str(e)}"
+        response = self._invoke_llm(prompt)
         
-        # 5. Log safety audit
+        # 5. Self-Correction Loop (Agentic Pattern)
+        if enable_self_correction:
+            confidence = self._estimate_confidence(response, context, question)
+            
+            if confidence < 0.5:
+                # Low confidence: try refined retrieval
+                refined_query = self._refine_query(question, response)
+                hits2 = self.retriever.retrieve(refined_query, top_k_bm25, top_k_vector, top_k_rerank)
+                
+                if hits2:
+                    # Merge new context
+                    all_hits = self._merge_hits(hits, hits2)
+                    context2 = self._format_context(all_hits, max_context_chunks)
+                    
+                    # Re-generate with expanded context
+                    prompt2 = SPECIALIST_PROMPT_TEMPLATE.format(
+                        role="Senior Analyst",
+                        specialty="Cross-referencing multiple sources for comprehensive answers.",
+                        query=question,
+                        context=context2
+                    )
+                    response = self._invoke_llm(prompt2)
+                    confidence = self._estimate_confidence(response, context2, question)
+        else:
+            confidence = None
+        
+        # 6. Log safety audit
         if self.safety:
             self.safety.log_query(question, str(response)[:100])
         
-        # 6. Format final output
+        # 7. Format final output
+        confidence_badge = f" (Confidence: {confidence:.0%})" if confidence else ""
         final_output = f"""
 ### 🧠 Query Analysis
 **Intent Detected**: `{intent.value.upper()}`
-**Active Agent**: {self._get_specialist_config(intent)[0]}
+**Active Agent**: {self._get_specialist_config(intent)[0]}{confidence_badge}
 
 ---
 
 {response}
 """
         return final_output
+    
+    def _invoke_llm(self, prompt: str) -> str:
+        """Invoke the LLM with error handling."""
+        try:
+            result = self.llm.invoke(prompt)
+            # Handle AIMessage objects from LangChain
+            if hasattr(result, "content"):
+                return result.content
+            return str(result)
+        except Exception as e:
+            if hasattr(self.llm, "predict"):
+                return self.llm.predict(prompt)
+            return f"Error invoking LLM: {str(e)}"
+    
+    def _estimate_confidence(self, response: str, context: str, question: str) -> float:
+        """
+        Estimate confidence in the response.
+        
+        Heuristics:
+        - Low confidence if response admits not knowing
+        - Low confidence if response doesn't cite sources
+        - Higher confidence if key question terms appear in response
+        """
+        response_lower = response.lower()
+        
+        # Check for admission of not knowing
+        refusal_patterns = [
+            "cannot find", "don't have", "not in the context",
+            "no information", "unable to", "not enough"
+        ]
+        if any(p in response_lower for p in refusal_patterns):
+            return 0.3
+        
+        # Check for citations
+        has_citations = bool(re.search(r'\[Source \d+\]|\[.*\.py', response))
+        citation_score = 0.3 if has_citations else 0.0
+        
+        # Check term overlap
+        question_terms = set(re.findall(r'\b\w+\b', question.lower()))
+        response_terms = set(re.findall(r'\b\w+\b', response_lower))
+        
+        # Remove stop words
+        stop_words = {"the", "a", "an", "is", "are", "was", "how", "what", "where", "when"}
+        question_terms -= stop_words
+        
+        if question_terms:
+            overlap = len(question_terms & response_terms) / len(question_terms)
+        else:
+            overlap = 0.5
+        
+        return min(1.0, citation_score + overlap * 0.7)
+    
+    def _refine_query(self, original_query: str, current_response: str) -> str:
+        """
+        Refine the query based on current response.
+        
+        If response mentions related concepts, add them to the query.
+        """
+        # Extract potential keywords from response
+        code_patterns = re.findall(r'\b([A-Z][a-z]+[A-Z]\w+|[a-z_]+_[a-z_]+)\b', current_response)
+        
+        if code_patterns:
+            # Add most common pattern to query
+            refined = f"{original_query} {code_patterns[0]}"
+            return refined
+        
+        return original_query
+    
+    def _merge_hits(self, hits1: List[RetrievalHit], hits2: List[RetrievalHit]) -> List[RetrievalHit]:
+        """Merge two hit lists, removing duplicates."""
+        seen_ids = {h.chunk.chunk_id for h in hits1}
+        merged = list(hits1)
+        
+        for h in hits2:
+            if h.chunk.chunk_id not in seen_ids:
+                seen_ids.add(h.chunk.chunk_id)
+                merged.append(h)
+        
+        return merged
+

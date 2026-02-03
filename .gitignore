@@ -1,0 +1,25 @@
+# Environment
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Distribution
+build/
+dist/
+*.egg-info/
+
+# Project Specific
+.codexrag/
+config.yaml
+*.log
+audit.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

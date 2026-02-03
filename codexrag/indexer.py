@@ -56,5 +56,23 @@ def build_index(cfg: RAGConfig, repo_root: Path) -> IndexStore:
     store = IndexStore(index_dir=index_dir, embedding_model=cfg.embedding_model)
     store.build(all_chunks)
     store.save()
+    
+    # --- New: Build & Save Graph ---
+    try:
+        from codexrag.graph import CodeGraph
+        # Filter for Python files for graph building
+        py_files = [f for f in files if f.suffix == ".py"]
+        if py_files:
+            print(f"Building knowledge graph from {len(py_files)} Python files...")
+            graph = CodeGraph()
+            graph.build_from_files(py_files)
+            graph.save(index_dir / "graph.json")
+            stats = graph.stats()
+            print(f"Graph built: {stats.get('total_entities', 0)} entities, {stats.get('total_edges', 0)} edges.")
+    except ImportError:
+        pass
+    except Exception as e:
+        print(f"Warning: Failed to build graph: {e}")
+
     _save_manifest(cache_dir, new_manifest)
     return store

@@ -51,7 +51,24 @@ st.markdown("""
 def load_rag_system():
     """Load the RAG system (cached for performance)."""
     repo = Path(".").resolve()
-    config_path = repo / "rag4mycodex" / "config.yaml"
+    
+    # Try multiple config locations for flexibility
+    config_candidates = [
+        repo / "config.yaml",                    # Root (standalone distribution)
+        repo / "rag4mycodex" / "config.yaml",    # Nested (when run from parent)
+    ]
+    
+    config_path = None
+    for candidate in config_candidates:
+        if candidate.exists():
+            config_path = candidate
+            break
+    
+    if config_path is None:
+        st.error("❌ config.yaml not found!")
+        st.info("Expected locations: " + ", ".join(str(c) for c in config_candidates))
+        return None, None
+        
     cfg = load_config(str(config_path))
     
     # Check index
@@ -62,7 +79,20 @@ def load_rag_system():
     store = IndexStore(index_dir=index_path, embedding_model=cfg.embedding_model)
     store.load()
     
-    retr = HybridRetriever(store, reranker_model=cfg.reranker_model)
+    base_retr = HybridRetriever(store, reranker_model=cfg.reranker_model)
+    
+    # Try to load Graph
+    try:
+        from codexrag.graph import CodeGraph, GraphEnhancedRetriever
+        graph_path = (repo / cfg.index_dir / "graph.json")
+        if graph_path.exists():
+            graph = CodeGraph()
+            graph.load(graph_path)
+            retr = GraphEnhancedRetriever(base_retr, graph)
+        else:
+            retr = base_retr
+    except ImportError:
+        retr = base_retr
     llm = make_ollama(model=cfg.ollama_model, base_url=cfg.ollama_base_url)
     safety = SafetyAgent(repo / ".codexrag")
     

@@ -1,92 +1,224 @@
-# CodeXRAG: State-of-the-Art Multi-Agent Scientific RAG
+# CodeXRAG: Scientific Codebase Assistant
 
-[![Status](https://img.shields.io/badge/Status-Production_Ready-green.svg)]()
-[![Architecture](https://img.shields.io/badge/Architecture-Multi_Agent_Orchestrator-blue.svg)]()
-[![Safety](https://img.shields.io/badge/Safety-Read_Only_Audited-red.svg)]()
+[![CI](https://github.com/sabinthapa100/codexrag/actions/workflows/ci.yml/badge.svg)](https://github.com/sabinthapa100/codexrag/actions)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.3.0-orange.svg)](https://github.com/sabinthapa100/codexrag)
 
-**CodeXRAG** is a Verified Research Assistant designed specifically for scientific codebases. Unlike generic RAG tools, it understands the structure of research code (Python, C++, Jupyter Notebooks), parses scientific data (CSV, HDF5 outputs), and enforces strict safety and citation protocols.
+> **A State-of-the-Art Multi-Agent RAG System for Scientific Codebases**
 
-## 🚀 Features
+CodeXRAG is a Verified Research Assistant that understands the structure of scientific code, parses heterogeneous data formats, and provides accurate, cited answers to your questions about any codebase.
 
-- **Multi-Agent Orchestrator**: Automatically routes queries to specialized experts:
-  - 🧠 **Code Analyst**: Understands class hierarchies and function logic.
-  - 📊 **Data Expert**: Interprets CSV/HDF5 schemas and plots.
-  - 📚 **Doc Expert**: Cites papers and markdown documentation.
-  - 📐 **Math Expert**: Explains physics formulas/LaTeX.
+---
 
-- **Scientific Parsing Engine**:
-  - **AST-Aware**: Parses Python/C++ logic blocks, not just text chunks.
-  - **Notebook Intelligence**: extract code & markdown cells individually.
-  - **Robustness**: Gracefully handles corrupted scientific data files.
+## ✨ Key Features
 
-- **Safety & Security**:
-  - **Zero-Deletion Guarantee**: Only performs read-only operations.
-  - **Audit Trail**: Logs every query and index operation to `.codexrag/audit.log`.
+### 🧠 Multi-Agent Architecture
+- **Intelligent Routing**: Automatically classifies queries (Code/Data/Math/Docs) and routes to specialized agents
+- **Self-Correction**: Agentic loop with confidence scoring and iterative retrieval
+- **Cross-File Understanding**: Answers questions that span multiple files
 
-## 📦 Installation
+### 📊 GraphRAG Integration (v0.3.0)
+- **Code Knowledge Graph**: Builds entity-relationship graph from Python AST
+- **Dependency Traversal**: Finds callers, callees, and related code automatically
+- **Context Expansion**: Enriches retrieval with graph-derived context
 
+### 🔬 Scientific-First Design
+- **AST-Aware Parsing**: Understands functions, classes, and code structure
+- **Heterogeneous Formats**: Parses Python, C++, Jupyter, CSV, PDF, HDF5
+- **LaTeX Support**: Web UI renders equations natively
+
+### 📏 Rigorous Evaluation (v0.3.0)
+- **Ragas-Style Metrics**: Faithfulness, Answer Relevancy, Context Precision/Recall
+- **Golden Set Testing**: Benchmark against curated query-answer pairs
+- **CI Integration**: Automated quality tracking
+
+### 🛡️ Safety & Auditability
+- **Zero-Deletion Guarantee**: Read-only operations only
+- **Audit Trail**: Every query logged for reproducibility
+
+---
+
+## 🚀 Quick Start
+
+### Installation
 ```bash
-# one-click setup (recommended)
+git clone https://github.com/sabinthapa100/codexrag.git
+cd codexrag
 ./setup_env.sh
-
-# Activate environment
 source .venv/bin/activate
 ```
 
-## ⚡ Usage
-
-### 1. Index Your Codebase (First Run)
-Navigate to your project root and run the indexer.
+### Index Your Codebase
 ```bash
-# Run from your project root
-codexrag index --repo . --config rag4mycodex/config.yaml
+codexrag index --repo /path/to/your/project
 ```
 
-### 2. Ask a Question
-Get a precise answer with citations.
+### Ask Questions
 ```bash
-codexrag ask --repo . --question "Where is RpA computed and how?"
+# CLI
+codexrag ask --repo /path/to/your/project --question "How is RpA computed?"
+
+# Interactive Chat
+codexrag chat --repo /path/to/your/project
+
+# Web UI (with LaTeX support!)
+streamlit run codexrag/gui.py
 ```
 
-### 3. Interactive Chat
-Start a session with your research assistant.
+### Run Evaluation
 ```bash
-codexrag chat --repo .
+codexrag eval --repo /path/to/your/project
 ```
-> **Tip**: Type `exit` to quit.
 
-### 4. Safety Audit
-View the security log.
-```bash
-codexrag audit --repo .
-```
+---
 
 ## 🏗️ Architecture
 
-CodeXRAG uses a **Subagent Pattern** with Centralized Orchestration:
-
-```mermaid
-graph TD
-    User[Query] --> Orch[Orchestrator]
-    Orch -->|Classify| Intent{Intent?}
-    Intent -->|Code| CodeAgent[Code Expert]
-    Intent -->|Data| DataAgent[Data Expert]
-    Intent -->|Math| MathAgent[Math Expert]
-    
-    CodeAgent & DataAgent & MathAgent --> RAG[Hybrid Retrieval]
-    RAG -->|BM25 + Vector| Context
-    Context --> Agent
-    Agent -->|Answer + Citations| Orch
-    Orch --> User
 ```
+┌─────────────────────────────────────────────────────────────────┐
+│                        USER QUERY                               │
+└───────────────────────────┬─────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      ORCHESTRATOR                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ Intent       │  │ Self-        │  │ Confidence           │  │
+│  │ Classifier   │──│ Correction   │──│ Scoring              │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└───────────────────────────┬─────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   HYBRID RETRIEVAL                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ BM25         │  │ Vector       │  │ Graph-Enhanced       │  │
+│  │ (Keywords)   │──│ (Semantic)   │──│ (Dependencies)       │  │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
+└───────────────────────────┬─────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    SPECIALIZED AGENTS                           │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐   │
+│  │ Code       │ │ Data       │ │ Math       │ │ Docs       │   │
+│  │ Analyst    │ │ Expert     │ │ Expert     │ │ Expert     │   │
+│  └────────────┘ └────────────┘ └────────────┘ └────────────┘   │
+└───────────────────────────┬─────────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              FORMATTED ANSWER WITH CITATIONS                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📊 Evaluation Metrics
+
+CodeXRAG uses Ragas-style metrics to measure quality:
+
+| Metric | Description | Target |
+|--------|-------------|--------|
+| **Faithfulness** | Is the answer grounded in context? | > 0.8 |
+| **Answer Relevancy** | Does the answer address the question? | > 0.7 |
+| **Context Precision** | Are retrieved chunks relevant? | > 0.6 |
+| **Context Recall** | Did retrieval find necessary info? | > 0.7 |
+
+Run `codexrag eval` to benchmark your instance.
+
+---
+
+## 📁 Project Structure
+
+```
+codexrag/
+├── agents/                 # Multi-agent system
+│   ├── orchestrator.py     # Central coordinator with self-correction
+│   └── safety_agent.py     # Read-only enforcement & audit
+├── graph/                  # GraphRAG module (v0.3.0)
+│   ├── code_graph.py       # AST-based knowledge graph
+│   └── graph_retriever.py  # Graph-enhanced retrieval
+├── eval/                   # Evaluation harness (v0.3.0)
+│   ├── metrics.py          # Ragas-style metrics
+│   └── golden_set.py       # Golden query management
+├── parsers/                # File parsers
+│   ├── python_parser.py    # AST-aware Python parsing
+│   ├── notebook_parser.py  # Jupyter cell extraction
+│   └── csv_parser.py       # Data file parsing
+├── retriever.py            # Hybrid BM25 + Vector search
+├── config.py               # Configuration management
+└── cli.py                  # Command-line interface
+```
+
+---
 
 ## 🔧 Configuration
 
-Edit `rag4mycodex/config.yaml` to customize:
-- `include_globs`: What files to index (e.g., `**/*.py`, `**/*.ipynb`)
-- `ollama_model`: The LLM to use (`qwen2.5-coder:14b` recommended)
-- `top_k_vector`: Number of chunks to retrieve
+Edit `config.yaml`:
+
+```yaml
+# What to index
+include_globs:
+  - "**/*.py"
+  - "**/*.ipynb"
+  - "**/*.md"
+
+# LLM settings (requires Ollama)
+ollama_model: "qwen2.5-coder:14b"
+ollama_base_url: "http://localhost:11434"
+
+# Retrieval tuning
+top_k_bm25: 12
+top_k_vector: 12
+top_k_rerank: 8
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Add tests** for new functionality
+4. **Submit** a pull request
+
+### Good First Issues
+- Add parser for `.fortran` files
+- Improve intent classification with embeddings
+- Add support for additional LLM backends
+
+---
+
+## 📚 Documentation
+
+- [How It Works](docs/HOW_IT_WORKS.md) - Complete technical deep-dive
+- [RAG Concepts](docs/RAG_CONCEPTS.md) - Educational overview
+
+---
 
 ## 📄 License
 
-MIT License. Built for the Scientific Computing Community.
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 👤 Author
+
+**Sabin Thapa**
+- Email: sthapa3@kent.edu / sabinthapa240@gmail.com
+- GitHub: [@sabinthapa100](https://github.com/sabinthapa100)
+
+---
+
+## 🌟 Star History
+
+If you find CodeXRAG useful, please star this repository! ⭐
+
+---
+
+## 🔮 Roadmap
+
+- [ ] Docker deployment with persistent vector store
+- [ ] HuggingFace Spaces demo
+- [ ] Support for Claude/Grok via LiteLLM
+- [ ] arXiv preprint with benchmark results

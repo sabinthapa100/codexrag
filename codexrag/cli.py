@@ -69,7 +69,22 @@ def _load_system(args) -> Orchestrator:
         sys.exit(1)
         
     # 2. Setup Retriever
-    retr = HybridRetriever(store, reranker_model=cfg.reranker_model)
+    base_retr = HybridRetriever(store, reranker_model=cfg.reranker_model)
+    
+    # Try to load Graph
+    try:
+        from codexrag.graph import CodeGraph, GraphEnhancedRetriever
+        graph_path = (repo / cfg.index_dir / "graph.json")
+        if graph_path.exists():
+            graph = CodeGraph()
+            graph.load(graph_path)
+            retr = GraphEnhancedRetriever(base_retr, graph)
+            if HAS_RICH:
+                console.print(f"[dim]Loaded Knowledge Graph with {len(graph.entities)} entities[/dim]")
+        else:
+            retr = base_retr
+    except ImportError:
+        retr = base_retr
     
     # 3. Setup LLM
     llm = make_ollama(model=cfg.ollama_model, base_url=cfg.ollama_base_url)
@@ -168,6 +183,65 @@ def cmd_audit(args):
     report = safety.generate_safety_report()
     print(report)
 
+def cmd_eval(args):
+    """Run evaluation on golden set."""
+    from codexrag.eval import RAGEvaluator, GoldenSet
+    from codexrag.eval.golden_set import EXAMPLE_GOLDEN_QUERIES
+    
+    repo = Path(args.repo).resolve()
+    golden_path = repo / args.golden_set
+    
+    # Load or create golden set
+    if golden_path.exists():
+        golden = GoldenSet.from_json(golden_path)
+    else:
+        if HAS_RICH:
+            console.print(f"[yellow]Golden set not found at {golden_path}. Using example queries.[/yellow]")
+        golden = GoldenSet(EXAMPLE_GOLDEN_QUERIES)
+    
+    if HAS_RICH:
+        console.print(f"[bold]Evaluating on {len(golden)} queries...[/bold]")
+    
+    orchestrator, cfg = _load_system(args)
+    evaluator = RAGEvaluator()
+    
+    # Run evaluation
+    results = []
+    for q in golden:
+        # Get RAG response
+        response = orchestrator.query(
+            q.query,
+            cfg.top_k_bm25,
+            cfg.top_k_vector,
+            cfg.top_k_rerank,
+            cfg.max_context_chunks,
+            enable_self_correction=False  # Disable for consistent eval
+        )
+        
+        # For now, we don't have contexts directly - use response
+        result = evaluator.evaluate_single(
+            query=q.query,
+            answer=response,
+            contexts=[response],  # Simplified
+            ground_truth=q.ground_truth
+        )
+        results.append(result)
+        
+        if HAS_RICH:
+            score_color = "green" if result.overall_score() > 0.6 else "yellow" if result.overall_score() > 0.4 else "red"
+            console.print(f"  [{score_color}]{result.overall_score():.2f}[/{score_color}] {q.query[:50]}...")
+    
+    # Generate report
+    _, aggregates = evaluator.evaluate_batch([{
+        "query": r.query,
+        "answer": r.answer,
+        "contexts": r.contexts,
+        "ground_truth": r.ground_truth
+    } for r in results])
+    
+    report = evaluator.generate_report(results, aggregates)
+    print(report)
+
 def main():
     p = argparse.ArgumentParser(prog="codexrag", description="State-of-the-Art Multi-Agent RAG.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -195,9 +269,17 @@ def main():
     p_audit = sub.add_parser("audit", help="View safety audit log.")
     p_audit.add_argument("--repo", default=".")
     p_audit.set_defaults(func=cmd_audit)
+    
+    # Eval Command
+    p_eval = sub.add_parser("eval", help="Run evaluation on golden set.")
+    p_eval.add_argument("--repo", default=".")
+    p_eval.add_argument("--config", default="config.yaml")
+    p_eval.add_argument("--golden-set", default="tests/golden_set.json", help="Path to golden set JSON")
+    p_eval.set_defaults(func=cmd_eval)
 
     args = p.parse_args()
     args.func(args)
 
 if __name__ == "__main__":
     main()
+
