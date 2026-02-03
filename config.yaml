@@ -39,4 +39,4 @@ top_k_bm25: 12
 top_k_vector: 12
 top_k_rerank: 8
 
-max_context_chunks: 8
+max_context_chunks: 12

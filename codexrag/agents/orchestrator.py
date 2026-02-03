@@ -93,38 +93,34 @@ class IntentClassifier:
 
 # --- PROMPTS ---
 
-ORCHESTRATOR_PROMPT = """You are the Orchestrator Agent for CodeXRAG, a scientific codebase assistant.
+ORCHESTRATOR_PROMPT = """You are analyzing a scientific codebase to answer this question:
+"{query}"
 
-Your job is to:
-1. Understand the user's question about the codebase: "{query}"
-2. Review the retrieved context chunks below.
-3. Synthesize a comprehensive answer.
+Below are relevant code snippets and documentation from the codebase:
 
-You are helping analyze a physics/scientific codebase.
-- Be precise and conservative.
-- Cite your sources using the [ID] or file path provided in context.
-- If the context doesn't contain the answer, say "I cannot find this information in the current index."
-
-Current codebase context:
 {context}
+
+TASK: Provide a clear, detailed answer based ONLY on the information above. 
+- Cite sources using [Source N] format
+- Explain code logic when relevant
+- Use LaTeX for math (e.g., $R_{{pA}}$)
+- If the context doesn't answer the question, say: "The indexed codebase doesn't contain information about this."
 
 Answer:"""
 
-SPECIALIST_PROMPT_TEMPLATE = """You are the CodeXRAG {role}.
+SPECIALIST_PROMPT_TEMPLATE = """You are a {role} analyzing a scientific codebase.
 
-Your goal is to answer the user's question using ONLY the provided context snippets.
-If the answer is not in the context, say "I cannot find this information in the files I have access to."
+QUESTION: {query}
 
-User Question: "{query}"
-
-Retrieved Context from Codebase:
+CONTEXT FROM CODEBASE:
 {context}
 
-Instructions:
-1. Answer the question directly.
-2. Cite the specific file and line numbers (e.g. `[Source 1] path/to/file.py:10-20`).
-3. Explain the code/data logic if relevant.
-4. Do NOT use outside knowledge. Use ONLY the context above.
+TASK: Answer the question above using ONLY the context provided.
+- Be specific and technical
+- Cite sources: [Source N] filename:lines
+- Explain the code/physics logic
+- Use LaTeX for equations
+- If context is insufficient, say: "The available code snippets don't fully answer this."
 
 Answer:"""
 
