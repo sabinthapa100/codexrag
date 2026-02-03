@@ -1,0 +1,42 @@
+repo_root: "."
+index_dir: ".codexrag/index"
+cache_dir: ".codexrag/cache"
+
+include_globs:
+  - "**/*.py"
+  - "**/*.ipynb"
+  - "**/*.cpp"
+  - "**/*.cc"
+  - "**/*.c"
+  - "**/*.h"
+  - "**/*.hpp"
+  - "**/*.md"
+  - "**/*.txt"
+  - "**/*.pdf"
+  - "**/*.csv"
+  - "**/*.json"
+exclude_globs:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/__pycache__/**"
+  - "**/.codexrag/**"
+  - "**/node_modules/**"
+  - "**/outputs/**"
+  - "**/output/**"
+  - "**/*.png"
+  - "**/*.jpg"
+
+max_chars: 3500
+overlap_chars: 250
+
+embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+reranker_model: ""   # e.g. "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+ollama_model: "qwen2.5-coder:14b"
+ollama_base_url: "http://localhost:11434"
+
+top_k_bm25: 12
+top_k_vector: 12
+top_k_rerank: 8
+
+max_context_chunks: 8

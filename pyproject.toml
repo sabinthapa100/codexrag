@@ -1,0 +1,46 @@
+[project]
+name = "codexrag"
+version = "0.2.0"
+description = "State-of-the-Art Multi-Agent RAG for Scientific Codebases"
+authors = [
+  { name="Sabin Thapa", email="sthapa3@kent.edu" },
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+    "tqdm>=4.66",
+    "sentence-transformers>=2.6",
+    "faiss-cpu>=1.7.4",
+    "rank-bm25>=0.2.2",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pymupdf>=1.23",
+    "nbformat>=5.9",
+    "langchain>=0.2",
+    "langchain-community>=0.2",
+    "langchain-ollama>=0.2",
+    "rich>=13.0",
+    "streamlit>=1.30",
+    "altair>=5.0",
+    "watchdog>=3.0",
+]
+
+[project.optional-dependencies]
+rerank = ["torch>=2.2"]
+ui = ["streamlit>=1.30"]
+dev = ["pytest", "black", "isort"]
+
+[project.scripts]
+codexrag = "codexrag.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["codexrag*"]
