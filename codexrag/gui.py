@@ -50,12 +50,21 @@ st.markdown("""
 @st.cache_resource
 def load_rag_system():
     """Load the RAG system (cached for performance)."""
-    repo = Path(".").resolve()
+    # Heuristic: Find where the .codexrag index actually lives
+    cwd = Path(".").resolve()
+    candidates = [cwd, cwd.parent]
     
+    repo = cwd
+    for cand in candidates:
+        if (cand / ".codexrag").exists():
+            repo = cand
+            break
+
     # Try multiple config locations for flexibility
     config_candidates = [
-        repo / "config.yaml",                    # Root (standalone distribution)
-        repo / "rag4mycodex" / "config.yaml",    # Nested (when run from parent)
+        repo / "rag4mycodex" / "config.yaml",    # Priority: Project specific
+        repo / "config.yaml",                    # Fallback: Dist default
+        cwd / "config.yaml",                     # Local fallback
     ]
     
     config_path = None
@@ -101,7 +110,7 @@ def load_rag_system():
 
 # --- Sidebar ---
 with st.sidebar:
-    st.image("https://img.shields.io/badge/CodeXRAG-v2.0-blue?style=for-the-badge", use_container_width=True)
+    st.image("https://img.shields.io/badge/CodeXRAG-v2.0-blue?style=for-the-badge", width="stretch")
     st.markdown("### ⚛️ Verified Research Assistant")
     st.markdown("---")
     
